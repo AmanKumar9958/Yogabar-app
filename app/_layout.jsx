@@ -5,8 +5,8 @@ import "../global.css";
 export default function RootLayout() {
   return (
     <>
-      <Stack screenOptions={{ headerShown: false }} />
-      <StatusBar style="light" backgroundColor="transparent" translucent />
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "yogabg" } }} />
+      <StatusBar style="dark" backgroundColor="transparent" translucent />
     </>
   );
 }

@@ -6,8 +6,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        yogapurple: '#5B2D82',
-        yogagreen: '#192D1E',
+        yogabg: '#F5F5F5',
       }
     },
   },
