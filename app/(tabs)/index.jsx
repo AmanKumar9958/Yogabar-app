@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Dimensions, FlatList, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 import { useShopifyProducts } from '../../hooks/useShopifyProducts';
 
 const { width } = Dimensions.get('window');
@@ -17,9 +18,6 @@ const ProductCard = ({ item, showNewTag = false }) => (
         contentFit="contain"
         transition={200}
       />
-      <TouchableOpacity className="absolute top-1 right-1 bg-white/80 rounded-full p-1">
-        <Ionicons name="heart-outline" size={16} color="#E33675" />
-      </TouchableOpacity>
       {showNewTag && (
         <View className="absolute top-1 left-1 bg-green-600 rounded px-1.5 py-0.5">
           <Text className="text-[10px] font-bold text-white">NEW</Text>
@@ -32,9 +30,23 @@ const ProductCard = ({ item, showNewTag = false }) => (
     <Text className="text-gray-500 text-xs mb-1" numberOfLines={1}>
       {item.description}
     </Text>
-    <Text className="text-gray-900 font-bold text-sm">
-      ₹{Math.round(item.price.amount)}
-    </Text>
+    <View className="flex-row items-center justify-between mt-1">
+      <Text className="text-gray-900 font-bold text-sm">
+        ₹{Math.round(item.price.amount)}
+      </Text>
+      <TouchableOpacity 
+        className="w-6 h-6 bg-[#E33675] rounded-full items-center justify-center"
+        onPress={() => {
+          Toast.show({
+            type: 'success',
+            text1: 'Added to Cart',
+            text2: `${item.title} added to your cart.`,
+          });
+        }}
+      >
+        <Ionicons name="add" size={16} color="white" />
+      </TouchableOpacity>
+    </View>
   </View>
 );
 
@@ -150,9 +162,9 @@ const CategoryGrid = ({ categories, onViewAll, onCategoryPress }) => {
       </View>
       <TouchableOpacity 
         onPress={onViewAll}
-        className="w-full bg-white py-3 rounded-full items-center mt-2 border border-gray-200"
+        className="w-full bg-white py-3 rounded-full items-center mt-2 border border-[#E33675]"
       >
-        <Text className="text-gray-900 font-bold">View All Categories</Text>
+        <Text className="text-[#E33675] font-bold">View All Categories</Text>
       </TouchableOpacity>
     </View>
   );

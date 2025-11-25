@@ -4,6 +4,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 import { useShopifyProducts } from '../../hooks/useShopifyProducts';
 
 const ProductItem = ({ item }) => {
@@ -49,7 +50,16 @@ const ProductItem = ({ item }) => {
           ₹{Math.round(item.price.amount)}
         </Text>
 
-        <TouchableOpacity className="w-8 h-8 bg-[#E33675] rounded-full items-center justify-center shadow-sm">
+        <TouchableOpacity 
+          className="w-8 h-8 bg-[#E33675] rounded-full items-center justify-center shadow-sm"
+          onPress={() => {
+            Toast.show({
+              type: 'success',
+              text1: 'Added to Cart',
+              text2: `${item.title} added to your cart.`,
+            });
+          }}
+        >
           <Ionicons name="add" size={20} color="white" />
         </TouchableOpacity>
       </View>
