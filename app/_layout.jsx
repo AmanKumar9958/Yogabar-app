@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Toast from 'react-native-toast-message';
 import CustomSplashScreen from "../components/CustomSplashScreen";
 import { toastConfig } from "../configs/toastConfig";
+import { CartProvider } from "../context/CartContext";
 import "../global.css";
 
 export default function RootLayout() {
@@ -22,10 +23,10 @@ export default function RootLayout() {
   }
 
   return (
-    <>
+    <CartProvider>
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "yogabg" } }} />
       <StatusBar style="dark" backgroundColor="transparent" translucent />
       <Toast config={toastConfig} />
-    </>
+    </CartProvider>
   );
 }

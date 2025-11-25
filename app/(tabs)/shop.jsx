@@ -5,11 +5,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
+import { useCart } from '../../context/CartContext';
 import { useShopifyProducts } from '../../hooks/useShopifyProducts';
 
 const ProductItem = ({ item }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const { addToCart } = useCart();
 
   return (
     <View className="flex-1 m-2 bg-[#FDF8F0] rounded-2xl p-3 shadow-sm">
@@ -53,6 +55,7 @@ const ProductItem = ({ item }) => {
         <TouchableOpacity 
           className="w-8 h-8 bg-[#E33675] rounded-full items-center justify-center shadow-sm"
           onPress={() => {
+            addToCart(item);
             Toast.show({
               type: 'success',
               text1: 'Added to Cart',
@@ -158,9 +161,9 @@ const ProductItem = ({ item }) => {
     };
 
   const renderHeader = () => (
-    <View className="px-4 pt-2 pb-4">
+    <View className="px-2 pt-2 pb-4">
       {/* Search Bar */}
-      <View className="flex-row items-center bg-white rounded-full px-4 py-3 mb-6 shadow-sm border border-gray-100">
+      <View className="flex-row items-center bg-white rounded-full px-4 py-3 mb-6 shadow-sm border border-gray-700">
         <Ionicons name="search" size={20} color="#9CA3AF" />
         <TextInput
           className="flex-1 ml-2 text-base text-gray-800"
@@ -183,7 +186,7 @@ const ProductItem = ({ item }) => {
         horizontal
         showsHorizontalScrollIndicator={false}
         keyExtractor={(item) => item}
-        contentContainerStyle={{ paddingRight: 20 }}
+        contentContainerStyle={{ paddingRight: 1 }}
         renderItem={({ item: category }) => (
           <TouchableOpacity
             onPress={() => setSelectedCategory(category)}
@@ -226,8 +229,8 @@ const ProductItem = ({ item }) => {
     }
 
     return (
-        <SafeAreaView className="flex-1 bg-[#F5F5F5]" edges={['top']}>
-            <FlatList
+        <SafeAreaView className="flex-1 bg-[#fff]" edges={['top']}>
+              <FlatList
                 data={displayedProducts}
                 renderItem={({ item }) => <ProductItem item={item} />}
                 keyExtractor={(item) => item.id}

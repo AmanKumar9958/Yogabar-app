@@ -1,54 +1,62 @@
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Dimensions, FlatList, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
+import { useCart } from '../../context/CartContext';
 import { useShopifyProducts } from '../../hooks/useShopifyProducts';
+import { getCustomer } from '../../services/shopify';
 
 const { width } = Dimensions.get('window');
 
-const ProductCard = ({ item, showNewTag = false }) => (
-  <View className="w-40 mr-4 bg-white rounded-xl p-3 shadow-sm">
-    <View className="relative w-full h-32 bg-gray-50 rounded-lg mb-2 items-center justify-center">
-      <Image
-        source={{ uri: item.image }}
-        style={{ width: '100%', height: '100%' }}
-        contentFit="contain"
-        transition={200}
-      />
-      {showNewTag && (
-        <View className="absolute top-1 left-1 bg-green-600 rounded px-1.5 py-0.5">
-          <Text className="text-[10px] font-bold text-white">NEW</Text>
-        </View>
-      )}
-    </View>
-    <Text className="text-gray-900 font-bold text-sm mb-1" numberOfLines={2}>
-      {item.title}
-    </Text>
-    <Text className="text-gray-500 text-xs mb-1" numberOfLines={1}>
-      {item.description}
-    </Text>
-    <View className="flex-row items-center justify-between mt-1">
-      <Text className="text-gray-900 font-bold text-sm">
-        ₹{Math.round(item.price.amount)}
+const ProductCard = ({ item, showNewTag = false }) => {
+  const { addToCart } = useCart();
+  
+  return (
+    <View className="w-40 mr-4 bg-white rounded-xl p-3 shadow-sm">
+      <View className="relative w-full h-32 bg-gray-50 rounded-lg mb-2 items-center justify-center">
+        <Image
+          source={{ uri: item.image }}
+          style={{ width: '100%', height: '100%' }}
+          contentFit="contain"
+          transition={200}
+        />
+        {showNewTag && (
+          <View className="absolute top-1 left-1 bg-green-600 rounded px-1.5 py-0.5">
+            <Text className="text-[10px] font-bold text-white">NEW</Text>
+          </View>
+        )}
+      </View>
+      <Text className="text-gray-900 font-bold text-sm mb-1" numberOfLines={2}>
+        {item.title}
       </Text>
-      <TouchableOpacity 
-        className="w-6 h-6 bg-[#E33675] rounded-full items-center justify-center"
-        onPress={() => {
-          Toast.show({
-            type: 'success',
-            text1: 'Added to Cart',
-            text2: `${item.title} added to your cart.`,
-          });
-        }}
-      >
-        <Ionicons name="add" size={16} color="white" />
-      </TouchableOpacity>
+      <Text className="text-gray-500 text-xs mb-1" numberOfLines={1}>
+        {item.description}
+      </Text>
+      <View className="flex-row items-center justify-between mt-1">
+        <Text className="text-gray-900 font-bold text-sm">
+          ₹{Math.round(item.price.amount)}
+        </Text>
+        <TouchableOpacity 
+          className="w-6 h-6 bg-[#E33675] rounded-full items-center justify-center"
+          onPress={() => {
+            addToCart(item);
+            Toast.show({
+              type: 'success',
+              text1: 'Added to Cart',
+              text2: `${item.title} added to your cart.`,
+            });
+          }}
+        >
+          <Ionicons name="add" size={16} color="white" />
+        </TouchableOpacity>
+      </View>
     </View>
-  </View>
-);
+  );
+};
 
 const SectionHeader = ({ title, onSeeAll }) => (
   <View className="flex-row justify-between items-center px-4 mb-3 mt-6">
@@ -174,6 +182,33 @@ const Home = () => {
   const router = useRouter();
   const { data: collections, loading, error } = useShopifyProducts();
   const [searchQuery, setSearchQuery] = useState('');
+  const [userName, setUserName] = useState('');
+  const [greeting, setGreeting] = useState('');
+  const { getCartCount } = useCart();
+
+  useEffect(() => {
+    fetchUser();
+    updateGreeting();
+  }, []);
+
+  const fetchUser = async () => {
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      if (token) {
+        const customer = await getCustomer(token);
+        setUserName(customer.firstName);
+      }
+    } catch (error) {
+      console.log('Error fetching user:', error);
+    }
+  };
+
+  const updateGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) setGreeting('Good Morning');
+    else if (hour < 18) setGreeting('Good Afternoon');
+    else setGreeting('Good Evening');
+  };
 
   // Flatten products for sections
   const allProducts = useMemo(() => {
@@ -205,10 +240,39 @@ const Home = () => {
 
   return (
     <SafeAreaView className="flex-1 bg-[#F5F5F5]" edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40, paddingTop: 30 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40, paddingTop: 20 }}>
+        
+        {/* Header with Greeting and Cart */}
+        <View className="px-4 flex-row justify-between items-center mb-4">
+          <View>
+            <Text className="text-gray-800 text-3xl font-medium">{greeting}</Text>
+            <Text className="text-gray-900 text-2xl font-bold">
+              {userName ? `${userName}` : 'Welcome!'}
+            </Text>
+          </View>
+          <TouchableOpacity 
+            className="w-10 h-10 bg-[#FDF8F0] rounded-full items-center justify-center relative"
+            onPress={() => {
+              // Navigate to cart page if it exists, or show toast for now
+              Toast.show({
+                type: 'info',
+                text1: 'Cart',
+                text2: `You have ${getCartCount()} items in your cart.`,
+              });
+            }}
+          >
+            <Ionicons name="cart-outline" size={24} color="#E33675" />
+            {getCartCount() > 0 && (
+              <View className="absolute -top-1 -right-1 bg-[#E33675] w-5 h-5 rounded-full items-center justify-center border-2 border-white">
+                <Text className="text-white text-[10px] font-bold">{getCartCount()}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+
         {/* Search Bar */}
         <View className="px-4 py-2">
-            <View className="flex-row items-center bg-white rounded-full px-4 py-3 border border-gray-200 shadow-sm">
+            <View className="flex-row items-center bg-white rounded-full px-4 py-3 border border-gray-700 shadow-sm">
                 <Ionicons name="search" size={20} color="#9CA3AF" />
                 <TextInput
                     className="flex-1 ml-2 text-base text-gray-800"

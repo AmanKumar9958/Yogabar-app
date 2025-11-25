@@ -59,11 +59,11 @@ const Profile = () => {
 
   return (
     <ScrollView 
-      className="flex-1 bg-[#FFF9E9]"
-      contentContainerStyle={{ paddingBottom: 100 }}
+      className="flex-1 bg-[#fff]"
+      contentContainerStyle={{ paddingBottom: 100, marginTop: 20 }}
     >
       {/* Header Section */}
-      <View className="bg-white pb-6 rounded-b-[30px] shadow-sm">
+      <View className="pb-6 rounded-b-[30px]">
         <View className="items-center mt-10">
           <View className="w-24 h-24 bg-gray-100 rounded-full items-center justify-center mb-4 border-2 border-[#E33675]">
             <Text className="text-3xl font-bold text-[#E33675]" numberOfLines={1}>
@@ -82,7 +82,7 @@ const Profile = () => {
       <View className="p-6 space-y-6">
         
         {/* Address Section */}
-        <View className="bg-white p-5 rounded-2xl shadow-sm">
+        <View className="bg-white p-5 rounded-2xl shadow-md">
           <View className="flex-row items-center mb-4">
             <View className="w-8 h-8 bg-pink-50 rounded-full items-center justify-center mr-3">
               <Ionicons name="location" size={18} color="#E33675" />
@@ -114,7 +114,7 @@ const Profile = () => {
         {/* Logout Button */}
         <TouchableOpacity 
           onPress={handleLogout}
-          className="bg-white p-4 rounded-2xl shadow-sm flex-row items-center justify-center border border-red-100"
+          className="bg-white p-4 rounded-2xl shadow-sm flex-row items-center justify-center border-2 border-[#E33675] mt-5"
         >
           <Ionicons name="log-out-outline" size={20} color="#EF4444" />
           <Text className="text-red-500 font-bold text-md ml-2">Log Out</Text>
