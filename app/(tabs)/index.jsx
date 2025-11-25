@@ -1,12 +1,266 @@
-import { View, Text } from 'react-native'
-import React from 'react'
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Dimensions, FlatList, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useShopifyProducts } from '../../hooks/useShopifyProducts';
 
-const home = () => {
-  return (
-    <View className="flex-1 justify-center items-center">
-      <Text>home</Text>
+const { width } = Dimensions.get('window');
+
+const ProductCard = ({ item, showNewTag = false }) => (
+  <View className="w-40 mr-4 bg-white rounded-xl p-3 shadow-sm">
+    <View className="relative w-full h-32 bg-gray-50 rounded-lg mb-2 items-center justify-center">
+      <Image
+        source={{ uri: item.image }}
+        style={{ width: '100%', height: '100%' }}
+        contentFit="contain"
+        transition={200}
+      />
+      <TouchableOpacity className="absolute top-1 right-1 bg-white/80 rounded-full p-1">
+        <Ionicons name="heart-outline" size={16} color="#E33675" />
+      </TouchableOpacity>
+      {showNewTag && (
+        <View className="absolute top-1 left-1 bg-green-600 rounded px-1.5 py-0.5">
+          <Text className="text-[10px] font-bold text-white">NEW</Text>
+        </View>
+      )}
     </View>
-  )
-}
+    <Text className="text-gray-900 font-bold text-sm mb-1" numberOfLines={2}>
+      {item.title}
+    </Text>
+    <Text className="text-gray-500 text-xs mb-1" numberOfLines={1}>
+      {item.description}
+    </Text>
+    <Text className="text-gray-900 font-bold text-sm">
+      ₹{Math.round(item.price.amount)}
+    </Text>
+  </View>
+);
 
-export default home
+const SectionHeader = ({ title, onSeeAll }) => (
+  <View className="flex-row justify-between items-center px-4 mb-3 mt-6">
+    <Text className="text-lg font-bold text-gray-900">{title}</Text>
+    <TouchableOpacity onPress={onSeeAll}>
+      <Text className="text-[#E33675] font-medium text-sm">See all</Text>
+    </TouchableOpacity>
+  </View>
+);
+
+const BannerCarousel = () => {
+  const banners = [
+    'https://cdn.shopify.com/s/files/1/0085/5588/8699/files/Desktop_Banner_1_1400x.jpg?v=1709203456', // Placeholder or real banner if available
+    'https://cdn.shopify.com/s/files/1/0085/5588/8699/files/Desktop_Banner_2_1400x.jpg?v=1709203456',
+  ];
+  const [activeIndex, setActiveIndex] = useState(0);
+  const scrollViewRef = useRef(null);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (scrollViewRef.current) {
+        let nextIndex = activeIndex + 1;
+        if (nextIndex >= banners.length) {
+          nextIndex = 0;
+        }
+        scrollViewRef.current.scrollTo({ x: nextIndex * width, animated: true });
+        setActiveIndex(nextIndex);
+      }
+    }, 3000); // Change slide every 3 seconds
+
+    return () => clearInterval(interval);
+  }, [activeIndex, banners.length]);
+
+  const handleScroll = (event) => {
+    const slideSize = event.nativeEvent.layoutMeasurement.width;
+    const index = event.nativeEvent.contentOffset.x / slideSize;
+    const roundIndex = Math.round(index);
+    if (roundIndex !== activeIndex) {
+        setActiveIndex(roundIndex);
+    }
+  };
+
+  return (
+    <View className="mt-6 mb-2">
+      <ScrollView 
+        ref={scrollViewRef}
+        horizontal 
+        pagingEnabled 
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={handleScroll}
+      >
+        {banners.map((banner, index) => (
+          <View key={index} style={{ width: width, paddingHorizontal: 16 }} className="h-40">
+             <View className="w-full h-full rounded-2xl overflow-hidden bg-[#FFD8C7] relative">
+                <Image 
+                    source={{ uri: banner }}
+                    style={{ width: '100%', height: '100%' }}
+                    contentFit="cover"
+                />
+                <View className="absolute inset-0 bg-black/10 justify-center pl-6">
+                    <Text className="text-white font-bold text-2xl w-2/3">FLAT 20% OFF</Text>
+                    <Text className="text-white font-medium text-sm mt-1">On your first order</Text>
+                    <Text className="text-white text-xs mt-1">Use code: YOGANEW</Text>
+                </View>
+             </View>
+          </View>
+        ))}
+      </ScrollView>
+      {/* Pagination Dots */}
+      <View className="flex-row justify-center mt-2 space-x-2">
+        {banners.map((_, index) => (
+            <View 
+                key={index} 
+                className={`h-2 rounded-full ${index === activeIndex ? 'w-6 bg-[#E33675]' : 'w-2 bg-gray-300'}`} 
+            />
+        ))}
+      </View>
+    </View>
+  );
+};
+
+const CategoryGrid = ({ categories, onViewAll, onCategoryPress }) => {
+  const displayCategories = categories.slice(0, 4);
+
+  return (
+    <View className="px-4 mt-6 mb-20">
+      <Text className="text-lg font-bold text-gray-900 mb-4">Shop by Category</Text>
+      <View className="flex-row flex-wrap justify-between">
+        {displayCategories.map((category, index) => (
+          <TouchableOpacity 
+            key={index} 
+            className="w-[48%] bg-white rounded-xl p-4 mb-4 items-center shadow-sm"
+            onPress={() => onCategoryPress(category.title)}
+          >
+             {/* Placeholder for category image since collection object might not have image in the current hook */}
+             <View className="w-20 h-20 bg-gray-50 rounded-lg mb-3 items-center justify-center">
+                {/* Try to find a product image from this category to show */}
+                {category.products.length > 0 ? (
+                    <Image 
+                        source={{ uri: category.products[0].image }}
+                        style={{ width: '100%', height: '100%' }}
+                        contentFit="contain"
+                    />
+                ) : (
+                    <Ionicons name="grid-outline" size={30} color="#ccc" />
+                )}
+             </View>
+            <Text className="text-gray-900 font-medium text-center">{category.title}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <TouchableOpacity 
+        onPress={onViewAll}
+        className="w-full bg-white py-3 rounded-full items-center mt-2 border border-gray-200"
+      >
+        <Text className="text-gray-900 font-bold">View All Categories</Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+const Home = () => {
+  const router = useRouter();
+  const { data: collections, loading, error } = useShopifyProducts();
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Flatten products for sections
+  const allProducts = useMemo(() => {
+    if (!collections) return [];
+    return collections.flatMap(c => c.products);
+  }, [collections]);
+
+  // Simulate different sections with slices of data
+  // In a real app, these would be specific collections or filtered lists
+  const ybChoice = useMemo(() => allProducts.slice(0, 5), [allProducts]);
+  const newArrivals = useMemo(() => allProducts.slice(5, 10), [allProducts]);
+  const bestSellers = useMemo(() => allProducts.slice(10, 15), [allProducts]);
+
+  if (loading) {
+    return (
+      <View className="flex-1 justify-center items-center bg-[#F5F5F5]">
+        <ActivityIndicator size="large" color="#E33675" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View className="flex-1 justify-center items-center bg-[#F5F5F5]">
+        <Text className="text-red-500">Error loading products</Text>
+      </View>
+    );
+  }
+
+  return (
+    <SafeAreaView className="flex-1 bg-[#F5F5F5]" edges={['top']}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40, paddingTop: 30 }}>
+        {/* Search Bar */}
+        <View className="px-4 py-2">
+            <View className="flex-row items-center bg-white rounded-full px-4 py-3 border border-gray-200 shadow-sm">
+                <Ionicons name="search" size={20} color="#9CA3AF" />
+                <TextInput
+                    className="flex-1 ml-2 text-base text-gray-800"
+                    placeholder="Search for products"
+                    placeholderTextColor="#9CA3AF"
+                    returnKeyType="search"
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    onSubmitEditing={() => router.push({ pathname: '/shop', params: { q: searchQuery } })}
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity onPress={() => setSearchQuery('')}>
+                    <Ionicons name="close-circle" size={20} color="#9CA3AF" />
+                  </TouchableOpacity>
+                )}
+            </View>
+        </View>
+
+        {/* YB Choice */}
+        <SectionHeader title="YB Choice" onSeeAll={() => router.push('/shop')} />
+        <FlatList
+          data={ybChoice}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16 }}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => <ProductCard item={item} />}
+        />
+
+        {/* New Arrivals */}
+        <SectionHeader title="New Arrivals" onSeeAll={() => router.push('/shop')} />
+        <FlatList
+          data={newArrivals}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16 }}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => <ProductCard item={item} showNewTag={true} />}
+        />
+
+        {/* Best Sellers */}
+        <SectionHeader title="Best Sellers" onSeeAll={() => router.push('/shop')} />
+        <FlatList
+          data={bestSellers}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16 }}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => <ProductCard item={item} />}
+        />
+
+        {/* Carousel */}
+        <BannerCarousel />
+
+        {/* Shop by Category */}
+        <CategoryGrid 
+            categories={collections} 
+            onViewAll={() => router.push('/shop')} 
+            onCategoryPress={(category) => router.push({ pathname: '/shop', params: { category } })}
+        />
+
+      </ScrollView>
+    </SafeAreaView>
+  );
+};
+
+export default Home;

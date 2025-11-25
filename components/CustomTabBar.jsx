@@ -111,7 +111,7 @@ export default function CustomTabBar({ state, descriptors, navigation }) {
 
               return (
                 <View key={route.key} style={styles.activeIconContainer}>
-                   <Ionicons name={iconName} size={24} color="black" />
+                   <Ionicons name={iconName} size={24} color="#fff" />
                 </View>
               );
            })}
@@ -152,7 +152,7 @@ export default function CustomTabBar({ state, descriptors, navigation }) {
               >
                 {/* Only show inactive icons here. Active icon is in the floating circle */}
                 {!isFocused && (
-                   <Ionicons name={iconName} size={24} color="#fff" />   // WhiteW for inactive
+                   <Ionicons name={iconName} size={24} color="#fff" />
                 )}
               </TouchableOpacity>
             );
