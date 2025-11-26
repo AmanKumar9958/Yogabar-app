@@ -1,17 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ActivityIndicator, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { loginCustomer } from '../services/shopify';
 
 export default function Login() {
+    const emailRef = useRef();
+    const passwordRef = useRef();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const validate = () => {
     let newErrors = {};
@@ -66,34 +69,46 @@ export default function Login() {
         <View className="space-y-4 gap-4">
           <View>
             <Text className="text-gray-700 mb-2 font-medium ml-1">Email</Text>
-            <TextInput
-              className="w-full p-4 rounded-xl border border-gray-500 text-base"
-              placeholder="Enter your email"
-              value={email}
-              onChangeText={(text) => {
-                setEmail(text);
-                if (errors.email) setErrors({...errors, email: null});
-              }}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              placeholderTextColor="#9CA3AF"
-            />
+              <TextInput
+                ref={emailRef}
+                className="w-full p-4 rounded-xl border border-gray-500 text-base"
+                placeholder="Enter your email"
+                value={email}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  if (errors.email) setErrors({...errors, email: null});
+                }}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                placeholderTextColor="#9CA3AF"
+                returnKeyType="next"
+                onSubmitEditing={() => passwordRef.current?.focus()}
+              />
             {errors.email && <Text className="text-red-500 text-sm ml-1 mt-1">{errors.email}</Text>}
           </View>
 
           <View>
             <Text className="text-gray-700 mb-2 font-medium ml-1">Password</Text>
-            <TextInput
-              className="w-full p-4 rounded-xl border border-gray-500 text-base"
-              placeholder="Enter your password"
-              value={password}
-              onChangeText={(text) => {
-                setPassword(text);
-                if (errors.password) setErrors({...errors, password: null});
-              }}
-              secureTextEntry
-              placeholderTextColor="#9CA3AF"
-            />
+              <View className="w-full flex-row items-center border border-gray-500 rounded-xl">
+                <TextInput
+                  ref={passwordRef}
+                  className="flex-1 p-4 text-base"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChangeText={(text) => {
+                    setPassword(text);
+                    if (errors.password) setErrors({...errors, password: null});
+                  }}
+                  secureTextEntry={!showPassword}
+                  placeholderTextColor="#9CA3AF"
+                  autoCapitalize="none"
+                  returnKeyType="done"
+                  onSubmitEditing={handleLogin}
+                />
+                <TouchableOpacity onPress={() => setShowPassword((prev) => !prev)} className="px-3">
+                  <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={22} color="#E33675" />
+                </TouchableOpacity>
+              </View>
             {errors.password && <Text className="text-red-500 text-sm ml-1 mt-1">{errors.password}</Text>}
           </View>
 
@@ -112,6 +127,12 @@ export default function Login() {
               <Text className="text-white font-bold text-lg">Login</Text>
             )}
           </TouchableOpacity>
+          <View className="flex-row justify-center mt-4">
+              <Text className="text-gray-600">Don&apos;t have an account? </Text>
+              <TouchableOpacity onPress={() => router.push('/signup')}>
+                <Text className="text-[#E33675] font-bold">Signup</Text>
+              </TouchableOpacity>
+            </View>
         </View>
       </View>
     </View>

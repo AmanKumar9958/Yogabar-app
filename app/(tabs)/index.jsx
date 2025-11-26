@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Dimensions, FlatList, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, BackHandler, Dimensions, FlatList, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import { useCart } from '../../context/CartContext';
@@ -179,6 +179,43 @@ const CategoryGrid = ({ categories, onViewAll, onCategoryPress }) => {
 };
 
 const Home = () => {
+      // Animated keyword placeholder logic for search bar
+      const keywordOptions = [
+        'protein',
+        'whey protein',
+        'oats',
+        'muesli',
+        'bars',
+        'snacks',
+      ];
+      const [placeholderIndex, setPlaceholderIndex] = useState(0);
+      const [placeholderAnim] = useState(new Animated.Value(0));
+
+      useEffect(() => {
+        const interval = setInterval(() => {
+          Animated.timing(placeholderAnim, {
+            toValue: -20,
+            duration: 200,
+            useNativeDriver: true,
+          }).start(() => {
+            setPlaceholderIndex((prev) => (prev + 1) % keywordOptions.length);
+            Animated.timing(placeholderAnim, {
+              toValue: 0,
+              duration: 200,
+              useNativeDriver: true,
+            }).start();
+          });
+        }, 2000);
+        return () => clearInterval(interval);
+      }, [placeholderAnim, keywordOptions.length]);
+    useEffect(() => {
+      const backAction = () => {
+        // Prevent going back from main tab screen
+        return true;
+      };
+      const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+      return () => backHandler.remove();
+    }, []);
   const router = useRouter();
   const { data: collections, loading, error } = useShopifyProducts();
   const [searchQuery, setSearchQuery] = useState('');
@@ -205,9 +242,9 @@ const Home = () => {
 
   const updateGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) setGreeting('Good Morning');
-    else if (hour < 18) setGreeting('Good Afternoon');
-    else setGreeting('Good Evening');
+    if (hour < 12) setGreeting('Good Morning 🌻');
+    else if (hour < 18) setGreeting('Good Afternoon ☀️');
+    else setGreeting('Good Evening 🌙');
   };
 
   // Flatten products for sections
@@ -252,14 +289,7 @@ const Home = () => {
           </View>
           <TouchableOpacity 
             className="w-10 h-10 bg-[#FDF8F0] rounded-full items-center justify-center relative"
-            onPress={() => {
-              // Navigate to cart page if it exists, or show toast for now
-              Toast.show({
-                type: 'info',
-                text1: 'Cart',
-                text2: `You have ${getCartCount()} items in your cart.`,
-              });
-            }}
+            onPress={() => router.push('/cart')}
           >
             <Ionicons name="cart-outline" size={24} color="#E33675" />
             {getCartCount() > 0 && (
@@ -272,23 +302,43 @@ const Home = () => {
 
         {/* Search Bar */}
         <View className="px-4 py-2">
-            <View className="flex-row items-center bg-white rounded-full px-4 py-3 border border-gray-700 shadow-sm">
-                <Ionicons name="search" size={20} color="#9CA3AF" />
-                <TextInput
-                    className="flex-1 ml-2 text-base text-gray-800"
-                    placeholder="Search for products"
-                    placeholderTextColor="#9CA3AF"
-                    returnKeyType="search"
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                    onSubmitEditing={() => router.push({ pathname: '/shop', params: { q: searchQuery } })}
-                />
-                {searchQuery.length > 0 && (
-                  <TouchableOpacity onPress={() => setSearchQuery('')}>
-                    <Ionicons name="close-circle" size={20} color="#9CA3AF" />
-                  </TouchableOpacity>
-                )}
+          <View className="flex-row items-center bg-white rounded-full px-4 py-1 border border-gray-700 shadow-sm" style={{ alignItems: 'center' }}>
+            <Ionicons name="search" size={20} color="#9CA3AF" />
+            <View style={{ flex: 1, marginLeft: 8, justifyContent: 'center', height: 40 }}>
+              <TextInput
+                className="text-base text-gray-800"
+                style={{ flex: 1, paddingTop: 0, paddingBottom: 0, height: 40, textAlignVertical: 'center' }}
+                placeholder=""
+                placeholderTextColor="#9CA3AF"
+                returnKeyType="search"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                onSubmitEditing={() => router.push({ pathname: '/shop', params: { q: searchQuery } })}
+              />
+              {/* Static 'Search for' and animated keyword */}
+              {searchQuery.length === 0 && (
+                <View style={{ position: 'absolute', left: 0, top: 0, height: 40, flexDirection: 'row', alignItems: 'center', zIndex: 1 }} pointerEvents="none">
+                  <Text style={{ color: '#9CA3AF', fontSize: 18, opacity: 0.8, paddingLeft: 2 }}>Search for </Text>
+                  <Animated.Text
+                    style={{
+                      color: '#9CA3AF',
+                      fontSize: 18,
+                      opacity: 0.8,
+                      transform: [{ translateY: placeholderAnim }],
+                      marginLeft: 2,
+                    }}
+                  >
+                    {keywordOptions[placeholderIndex]}
+                  </Animated.Text>
+                </View>
+              )}
             </View>
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={20} color="#9CA3AF" />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
         {/* YB Choice */}

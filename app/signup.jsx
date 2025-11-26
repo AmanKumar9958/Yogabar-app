@@ -1,12 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { createCustomer, createCustomerAddress, loginCustomer } from '../services/shopify';
 
 export default function Signup() {
+    // Refs for input fields to move to next
+    const lastNameRef = useRef();
+    const phoneRef = useRef();
+    const emailRef = useRef();
+    const addressRef = useRef();
+    const passwordRef = useRef();
   const router = useRouter();
   const [formData, setFormData] = useState({
     firstName: '',
@@ -18,6 +24,7 @@ export default function Signup() {
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (key, value) => {
     setFormData(prev => ({ ...prev, [key]: value }));
@@ -111,17 +118,24 @@ export default function Signup() {
                 value={formData.firstName}
                 onChangeText={(t) => handleChange('firstName', t)}
                 placeholderTextColor="#9CA3AF"
+                returnKeyType="next"
+                autoCapitalize="words"
+                onSubmitEditing={() => lastNameRef.current?.focus()}
               />
               {errors.firstName && <Text className="text-red-500 text-xs ml-1 mt-1">{errors.firstName}</Text>}
             </View>
             <View className="flex-1">
               <Text className="text-gray-700 mb-2 font-medium ml-1">Last Name</Text>
               <TextInput
+                ref={lastNameRef}
                 className="w-full p-4 rounded-xl border border-gray-500 text-base"
                 placeholder="Last Name"
                 value={formData.lastName}
                 onChangeText={(t) => handleChange('lastName', t)}
                 placeholderTextColor="#9CA3AF"
+                returnKeyType="next"
+                autoCapitalize="words"
+                onSubmitEditing={() => phoneRef.current?.focus()}
               />
               {errors.lastName && <Text className="text-red-500 text-xs ml-1 mt-1">{errors.lastName}</Text>}
             </View>
@@ -129,53 +143,72 @@ export default function Signup() {
 
           <View>
             <Text className="text-gray-700 mb-2 font-medium ml-1">Phone</Text>
-            <TextInput
-              className="w-full p-4 rounded-xl border border-gray-500 text-base"
-              placeholder="Enter your phone number"
-              value={formData.phone}
-              onChangeText={(t) => handleChange('phone', t)}
-              keyboardType="phone-pad"
-              placeholderTextColor="#9CA3AF"
-            />
+              <TextInput
+                ref={phoneRef}
+                className="w-full p-4 rounded-xl border border-gray-500 text-base"
+                placeholder="Enter your phone number"
+                value={formData.phone}
+                onChangeText={(t) => handleChange('phone', t)}
+                keyboardType="phone-pad"
+                placeholderTextColor="#9CA3AF"
+                returnKeyType="next"
+                onSubmitEditing={() => emailRef.current?.focus()}
+              />
             {errors.phone && <Text className="text-red-500 text-sm ml-1 mt-1">{errors.phone}</Text>}
           </View>
 
           <View>
             <Text className="text-gray-700 mb-2 font-medium ml-1">Email</Text>
-            <TextInput
-              className="w-full p-4 rounded-xl border border-gray-500 text-base"
-              placeholder="Enter your email"
-              value={formData.email}
-              onChangeText={(t) => handleChange('email', t)}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              placeholderTextColor="#9CA3AF"
-            />
+              <TextInput
+                ref={emailRef}
+                className="w-full p-4 rounded-xl border border-gray-500 text-base"
+                placeholder="Enter your email"
+                value={formData.email}
+                onChangeText={(t) => handleChange('email', t)}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                placeholderTextColor="#9CA3AF"
+                returnKeyType="next"
+                onSubmitEditing={() => addressRef.current?.focus()}
+              />
             {errors.email && <Text className="text-red-500 text-sm ml-1 mt-1">{errors.email}</Text>}
           </View>
 
           <View>
             <Text className="text-gray-700 mb-2 font-medium ml-1">Address</Text>
-            <TextInput
-              className="w-full p-4 rounded-xl border border-gray-500 text-base"
-              placeholder="Enter your address"
-              value={formData.address}
-              onChangeText={(t) => handleChange('address', t)}
-              placeholderTextColor="#9CA3AF"
-            />
+              <TextInput
+                ref={addressRef}
+                className="w-full p-4 rounded-xl border border-gray-500 text-base"
+                placeholder="Enter your address"
+                value={formData.address}
+                onChangeText={(t) => handleChange('address', t)}
+                placeholderTextColor="#9CA3AF"
+                returnKeyType="next"
+                autoCapitalize="words"
+                onSubmitEditing={() => passwordRef.current?.focus()}
+              />
             {errors.address && <Text className="text-red-500 text-sm ml-1 mt-1">{errors.address}</Text>}
           </View>
 
           <View>
             <Text className="text-gray-700 mb-2 font-medium ml-1">Password</Text>
-            <TextInput
-              className="w-full p-4 rounded-xl border border-gray-500 text-base"
-              placeholder="Create a password"
-              value={formData.password}
-              onChangeText={(t) => handleChange('password', t)}
-              secureTextEntry
-              placeholderTextColor="#9CA3AF"
-            />
+              <View className="w-full flex-row items-center border border-gray-500 rounded-xl">
+                <TextInput
+                  ref={passwordRef}
+                  className="flex-1 p-4 text-base"
+                  placeholder="Create a password"
+                  value={formData.password}
+                  onChangeText={(t) => handleChange('password', t)}
+                  secureTextEntry={!showPassword}
+                  placeholderTextColor="#9CA3AF"
+                  autoCapitalize="none"
+                  returnKeyType="done"
+                  onSubmitEditing={handleSignup}
+                />
+                <TouchableOpacity onPress={() => setShowPassword((prev) => !prev)} className="px-3">
+                  <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={22} color="#E33675" />
+                </TouchableOpacity>
+              </View>
             {errors.password && <Text className="text-red-500 text-sm ml-1 mt-1">{errors.password}</Text>}
           </View>
 
@@ -187,7 +220,7 @@ export default function Signup() {
             {loading ? (
               <ActivityIndicator color="white" />
             ) : (
-              <Text className="text-white font-bold text-lg">Sign Up</Text>
+              <Text className="text-white font-bold text-lg" numberOfLines={1}>Sign Up</Text>
             )}
           </TouchableOpacity>
 

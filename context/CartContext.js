@@ -33,6 +33,16 @@ export const CartProvider = ({ children }) => {
     }
   };
 
+  const normalizePrice = (price) => {
+    if (typeof price === 'object' && price !== null && typeof price.amount === 'number') {
+      return { amount: price.amount };
+    } else if (typeof price === 'number') {
+      return { amount: price };
+    } else {
+      return { amount: 0 };
+    }
+  };
+
   const addToCart = (product) => {
     setCartItems((prevItems) => {
       const existingItem = prevItems.find((item) => item.id === product.id);
@@ -41,7 +51,15 @@ export const CartProvider = ({ children }) => {
           item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
-      return [...prevItems, { ...product, quantity: 1 }];
+      // Always normalize price structure
+      return [
+        ...prevItems,
+        {
+          ...product,
+          price: normalizePrice(product.price),
+          quantity: 1,
+        },
+      ];
     });
   };
 

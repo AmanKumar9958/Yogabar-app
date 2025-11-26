@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import { useCart } from '../../context/CartContext';
@@ -160,20 +160,72 @@ const ProductItem = ({ item }) => {
         setVisibleCount(prev => prev + 6);
     };
 
+  // Animated placeholder logic
+  const keywordOptions = [
+    'protein',
+    'whey protein',
+    'oats',
+    'muesli',
+    'bars',
+    'snacks',
+  ];
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const [placeholderAnim] = useState(new Animated.Value(0));
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      Animated.timing(placeholderAnim, {
+        toValue: -20,
+        duration: 200,
+        useNativeDriver: true,
+      }).start(() => {
+        setPlaceholderIndex((prev) => (prev + 1) % keywordOptions.length);
+        Animated.timing(placeholderAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }).start();
+      });
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [placeholderAnim, keywordOptions.length]);
+
   const renderHeader = () => (
     <View className="px-2 pt-2 pb-4">
       {/* Search Bar */}
-      <View className="flex-row items-center bg-white rounded-full px-4 py-3 mb-6 shadow-sm border border-gray-700">
-        <Ionicons name="search" size={20} color="#9CA3AF" />
-        <TextInput
-          className="flex-1 ml-2 text-base text-gray-800"
-          placeholder="Search for muesli, bars, protein..."
-          placeholderTextColor="#9CA3AF"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
+      <View className="flex-row bg-white rounded-full px-4 py-1 mb-6 shadow-sm border border-gray-700 items-center" style={{ alignItems: 'center' }}>
+        <View style={{ justifyContent: 'center', alignItems: 'center', height: 40 }}>
+          <Ionicons name="search" size={22} color="#9CA3AF" style={{ marginTop: 2 }} />
+        </View>
+        <View style={{ flex: 1, marginLeft: 10, justifyContent: 'center', height: 40 }}>
+          <TextInput
+            className="text-base text-gray-800"
+            style={{ flex: 1, paddingTop: 0, paddingBottom: 0, height: 40, textAlignVertical: 'center' }}
+            placeholder=""
+            placeholderTextColor="#9CA3AF"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {/* Static 'Search for' and animated keyword */}
+          {searchQuery.length === 0 && (
+            <View style={{ position: 'absolute', left: 0, top: 0, height: 40, flexDirection: 'row', alignItems: 'center', zIndex: 1 }} pointerEvents="none">
+              <Text style={{ color: '#9CA3AF', fontSize: 18, opacity: 0.8, paddingLeft: 2 }}>Search for </Text>
+              <Animated.Text
+                style={{
+                  color: '#9CA3AF',
+                  fontSize: 18,
+                  opacity: 0.8,
+                  transform: [{ translateY: placeholderAnim }],
+                  marginLeft: 2,
+                }}
+              >
+                {keywordOptions[placeholderIndex]}
+              </Animated.Text>
+            </View>
+          )}
+        </View>
         {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery('')}>
+          <TouchableOpacity onPress={() => setSearchQuery('')} style={{ marginLeft: 6 }}>
             <Ionicons name="close-circle" size={20} color="#9CA3AF" />
           </TouchableOpacity>
         )}
@@ -191,7 +243,7 @@ const ProductItem = ({ item }) => {
           <TouchableOpacity
             onPress={() => setSelectedCategory(category)}
             className={`px-6 py-2 rounded-full mr-3 ${
-              selectedCategory === category ? 'bg-[#E33675]' : 'bg-white border border-gray-100'
+              selectedCategory === category ? 'bg-[#E33675]' : 'bg-white border border-gray-700'
             }`}
           >
             <Text
@@ -235,7 +287,7 @@ const ProductItem = ({ item }) => {
                 renderItem={({ item }) => <ProductItem item={item} />}
                 keyExtractor={(item) => item.id}
                 numColumns={2}
-                contentContainerStyle={{ padding: 8, paddingBottom: 100, paddingTop: 10 }}
+                contentContainerStyle={{ padding: 8, paddingBottom: 100, paddingTop: 20 }}
                 ListHeaderComponent={renderHeader()}
                 showsVerticalScrollIndicator={false}
                 ListFooterComponent={() => (

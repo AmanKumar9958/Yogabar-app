@@ -2,13 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { getCustomer } from '../../services/shopify';
 
 const Profile = () => {
-  const router = useRouter();
-  const [customer, setCustomer] = useState(null);
-  const [loading, setLoading] = useState(true);
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
+    const router = useRouter();
+    const [customer, setCustomer] = useState(null);
+    const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchProfile();
@@ -58,6 +59,7 @@ const Profile = () => {
   const defaultAddress = customer.defaultAddress || {};
 
   return (
+    <>
     <ScrollView 
       className="flex-1 bg-[#fff]"
       contentContainerStyle={{ paddingBottom: 100, marginTop: 20 }}
@@ -113,7 +115,7 @@ const Profile = () => {
 
         {/* Logout Button */}
         <TouchableOpacity 
-          onPress={handleLogout}
+          onPress={() => setShowLogoutModal(true)}
           className="bg-white p-4 rounded-2xl shadow-sm flex-row items-center justify-center border-2 border-[#E33675] mt-5"
         >
           <Ionicons name="log-out-outline" size={20} color="#EF4444" />
@@ -122,6 +124,39 @@ const Profile = () => {
 
       </View>
     </ScrollView>
+      {/* Stylish Logout Confirmation Modal */}
+      <Modal
+        visible={showLogoutModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLogoutModal(false)}
+      >
+        <View className="flex-1 justify-center items-center bg-black/40">
+          <View className="bg-white rounded-2xl p-8 w-80 items-center shadow-lg">
+            <Ionicons name="alert-circle" size={48} color="#E33675" style={{ marginBottom: 12 }} />
+            <Text className="text-xl font-bold text-gray-800 mb-2" numberOfLines={1}>Log Out?</Text>
+            <Text className="text-gray-500 text-center mb-6">Are you sure you want to log out?</Text>
+            <View className="flex-row gap-4 mt-2">
+              <TouchableOpacity
+                className="flex-1 bg-[#E33675] py-3 rounded-xl items-center mr-2"
+                onPress={() => {
+                  setShowLogoutModal(false);
+                  handleLogout();
+                }}
+              >
+                <Text className="text-white font-bold text-base" numberOfLines={1}>Log Out</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="flex-1 bg-gray-100 py-3 rounded-xl items-center ml-2 border border-gray-300"
+                onPress={() => setShowLogoutModal(false)}
+              >
+                <Text className="text-gray-700 font-bold text-base">Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      </>
   );
 };
 
