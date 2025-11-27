@@ -13,6 +13,14 @@ const ProductItem = ({ item }) => {
   const [hasError, setHasError] = useState(false);
   const { addToCart } = useCart();
 
+  // Helper to normalize price for cart and display
+  const getCartPrice = (item) => {
+    if (typeof item.price === 'number') return item.price;
+    if (item.price && typeof item.price.amount === 'number') return item.price.amount;
+    if (item.price && typeof item.price.amount === 'string') return parseFloat(item.price.amount) || 0;
+    return 0;
+  };
+  const displayPrice = getCartPrice(item);
   return (
     <View className="flex-1 m-2 bg-[#FDF8F0] rounded-2xl p-3 shadow-sm">
       <View className="w-full h-32 bg-white rounded-xl mb-3 overflow-hidden items-center justify-center relative">
@@ -49,13 +57,14 @@ const ProductItem = ({ item }) => {
 
       <View className="flex-row items-center justify-between mt-auto">
         <Text className="text-gray-600 font-medium">
-          ₹{Math.round(item.price.amount)}
+          ₹{Math.round(displayPrice)}
         </Text>
 
         <TouchableOpacity 
           className="w-8 h-8 bg-[#E33675] rounded-full items-center justify-center shadow-sm"
           onPress={() => {
-            addToCart(item);
+            // Pass normalized price for cart
+            addToCart({ ...item, price: displayPrice });
             Toast.show({
               type: 'success',
               text1: 'Added to Cart',
@@ -70,6 +79,8 @@ const ProductItem = ({ item }) => {
   );
 };    const Shop = () => {
     const { q, category } = useLocalSearchParams();
+    const { cartItems, getCartCount } = useCart();
+    const router = require('expo-router').useRouter();
     const { data: collections, loading, error } = useShopifyProducts();
     const [searchQuery, setSearchQuery] = useState(q || '');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(q || '');
@@ -280,34 +291,67 @@ const ProductItem = ({ item }) => {
         );
     }
 
+    // Calculate total price robustly using cartItems
+    const getTotalPrice = () => {
+      if (!cartItems || cartItems.length === 0) return 0;
+      return cartItems.reduce((sum, item) => {
+        let price = 0;
+        if (item.price && typeof item.price.amount === 'number' && !isNaN(item.price.amount)) price = item.price.amount;
+        else if (typeof item.price === 'number' && !isNaN(item.price)) price = item.price;
+        else if (item.price && typeof item.price.amount === 'string') price = parseFloat(item.price.amount) || 0;
+        if (!price || isNaN(price)) return sum;
+        return sum + price * (item.quantity && item.quantity > 0 ? item.quantity : 1);
+      }, 0);
+    };
+    const totalItems = getCartCount();
+    const totalPrice = getTotalPrice();
+
     return (
-        <SafeAreaView className="flex-1 bg-[#fff]" edges={['top']}>
-              <FlatList
-                data={displayedProducts}
-                renderItem={({ item }) => <ProductItem item={item} />}
-                keyExtractor={(item) => item.id}
-                numColumns={2}
-                contentContainerStyle={{ padding: 8, paddingBottom: 100, paddingTop: 20 }}
-                ListHeaderComponent={renderHeader()}
-                showsVerticalScrollIndicator={false}
-                ListFooterComponent={() => (
-                filteredProducts.length > 0 ? (
-                    visibleCount < filteredProducts.length ? (
-                    <TouchableOpacity
-                        onPress={handleShowMore}
-                        className="mx-4 my-6 border border-[#E33675] rounded-full py-3 items-center"
-                    >
-                        <Text className="text-[#E33675] font-bold text-base">Show more</Text>
-                    </TouchableOpacity>
-                    ) : (
-                    <Text className="text-center text-gray-500 mt-10 mb-6">No more products</Text>
-                    )
+      <SafeAreaView className="flex-1 bg-transparent" edges={['top']}>
+        <View style={{ flex: 1 }}>
+          <FlatList
+            data={displayedProducts}
+            renderItem={({ item }) => <ProductItem item={item} />}
+            keyExtractor={(item) => item.id}
+            numColumns={2}
+            contentContainerStyle={{ padding: 8, paddingBottom: totalItems > 0 ? 200 : 100, paddingTop: 20 }}
+            ListHeaderComponent={renderHeader()}
+            showsVerticalScrollIndicator={false}
+            ListFooterComponent={() => (
+              filteredProducts.length > 0 ? (
+                visibleCount < filteredProducts.length ? (
+                  <TouchableOpacity
+                    onPress={handleShowMore}
+                    className="mx-4 my-6 border border-[#E33675] rounded-full py-3 items-center"
+                  >
+                    <Text className="text-[#E33675] font-bold text-base">Show more</Text>
+                  </TouchableOpacity>
                 ) : (
-                    <Text className="text-center text-gray-500 mt-10">No products found</Text>
+                  <Text className="text-center text-gray-500 mt-10 mb-6">No more products</Text>
                 )
-                )}
-            />
-        </SafeAreaView>
+              ) : (
+                <Text className="text-center text-gray-500 mt-10">No products found</Text>
+              )
+            )}
+          />
+          {/* Checkout Button Fixed at Bottom, outside FlatList */}
+          {totalItems > 0 && (
+            <View style={{ position: 'absolute', left: 0, right: 0, bottom: 80, padding: 16, borderTopWidth: 0, borderColor: 'transparent', elevation: 8 }}>
+              <TouchableOpacity
+                className="flex-row items-center justify-between bg-[#E33675] rounded-full px-6 py-4"
+                onPress={() => router.push('/cart')}
+                activeOpacity={0.85}
+              >
+                <View>
+                  <Text className="text-white font-bold text-base">Checkout</Text>
+                  <Text className="text-white text-sm mt-1">{totalItems} item{totalItems > 1 ? 's' : ''} • ₹{Math.round(totalPrice)}</Text>
+                </View>
+                <Ionicons name="arrow-forward-circle" size={32} color="#fff" style={{ marginLeft: 12 }} />
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </SafeAreaView>
     );
 };
 

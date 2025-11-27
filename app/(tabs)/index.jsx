@@ -14,7 +14,14 @@ const { width } = Dimensions.get('window');
 
 const ProductCard = ({ item, showNewTag = false }) => {
   const { addToCart } = useCart();
-  
+  // Defensive price normalization
+  const getCartPrice = (item) => {
+    if (typeof item.price === 'number') return item.price;
+    if (item.price && typeof item.price.amount === 'number') return item.price.amount;
+    if (item.price && typeof item.price.amount === 'string') return parseFloat(item.price.amount) || 0;
+    return 0;
+  };
+  const displayPrice = getCartPrice(item);
   return (
     <View className="w-40 mr-4 bg-white rounded-xl p-3 shadow-sm">
       <View className="relative w-full h-32 bg-gray-50 rounded-lg mb-2 items-center justify-center">
@@ -38,12 +45,12 @@ const ProductCard = ({ item, showNewTag = false }) => {
       </Text>
       <View className="flex-row items-center justify-between mt-1">
         <Text className="text-gray-900 font-bold text-sm">
-          ₹{Math.round(item.price.amount)}
+          ₹{Math.round(displayPrice)}
         </Text>
         <TouchableOpacity 
           className="w-6 h-6 bg-[#E33675] rounded-full items-center justify-center"
           onPress={() => {
-            addToCart(item);
+            addToCart({ ...item, price: displayPrice });
             Toast.show({
               type: 'success',
               text1: 'Added to Cart',

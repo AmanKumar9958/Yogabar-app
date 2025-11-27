@@ -11,22 +11,19 @@ export default function CartScreen() {
     // --- HELPER TO FIX PRICE ISSUE ---
     const getPrice = (item) => {
         if (!item) return 0;
-        
         // Case A: Price is inside price.amount (Shopify Structure)
-        if (item.price && item.price.amount) {
-            return parseFloat(item.price.amount);
+        if (item.price && typeof item.price.amount === 'number') {
+            return item.price.amount;
         }
-        
-        // Case B: Price is directly on the item
-        if (item.price) {
-            return parseFloat(item.price);
+        // Case B: Price is directly on the item as a number
+        if (typeof item.price === 'number') {
+            return item.price;
         }
-        
         // Case C: Price might be under 'variants' if raw Shopify product was passed
-        if (item.variants && item.variants[0]?.price?.amount) {
-            return parseFloat(item.variants[0].price.amount);
+        if (item.variants && typeof item.variants[0]?.price?.amount === 'number') {
+            return item.variants[0].price.amount;
         }
-
+        // Defensive fallback
         return 0;
     };
 
