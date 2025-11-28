@@ -81,7 +81,7 @@ export default function CartScreen() {
                     cartItems.map((item) => {
                         const price = getPrice(item);
                         return (
-                            <View key={item.id} className="flex-row items-center mt-6 mb-2 bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+                            <View key={item.id} className="flex-row items-center mt-4 mb-1 bg-white p-2 rounded-2xl border border-gray-200 shadow-sm">
                                 <Image
                                     source={{ uri: item.image }}
                                     style={{ width: 90, height: 90, borderRadius: 16, backgroundColor: '#F5F5F5', marginRight: 18 }}
