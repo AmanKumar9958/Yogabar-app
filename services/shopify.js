@@ -134,13 +134,36 @@ export const createCustomerAddress = async (accessToken, address) => {
 
 export const getCustomer = async (accessToken) => {
   const query = `
-    query {
-      customer(customerAccessToken: "${accessToken}") {
+    query getCustomer($customerAccessToken: String!) {
+      customer(customerAccessToken: $customerAccessToken) {
         id
         firstName
         lastName
         email
         phone
+        orders(first: 10, reverse: true) {
+          edges {
+            node {
+              id
+              orderNumber
+              processedAt
+              financialStatus
+              fulfillmentStatus
+              totalPrice {
+                amount
+                currencyCode
+              }
+              lineItems(first: 3) {
+                edges {
+                  node {
+                    title
+                    quantity
+                  }
+                }
+              }
+            }
+          }
+        }
         defaultAddress {
           address1
           city
@@ -163,6 +186,7 @@ export const getCustomer = async (accessToken) => {
     }
   `;
 
-  const data = await shopifyRequest(query, {});
+  const variables = { customerAccessToken: accessToken };
+  const data = await shopifyRequest(query, variables);
   return data.customer;
 };

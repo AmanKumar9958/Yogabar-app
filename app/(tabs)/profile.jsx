@@ -68,11 +68,11 @@ const Profile = () => {
       <View className="pb-6 rounded-b-[30px]">
         <View className="items-center mt-10">
           <View className="w-24 h-24 bg-gray-100 rounded-full items-center justify-center mb-4 border-2 border-[#E33675]">
-            <Text className="text-3xl font-bold text-[#E33675]" numberOfLines={1}>
+            <Text className="text-3xl font-bold text-[#E33675]">
               {customer.firstName?.[0]}{customer.lastName?.[0]}
             </Text>
           </View>
-          <Text className="text-2xl font-bold text-gray-800">
+          <Text className="text-3xl font-bold text-gray-800" numberOfLines={1}>
             {customer.firstName} {customer.lastName}
           </Text>
           <Text className="text-gray-500 mt-1">{customer.email}</Text>
