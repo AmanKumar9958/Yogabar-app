@@ -306,7 +306,7 @@ const Home = () => {
 
   return (
     <SafeAreaView className="flex-1 bg-[#F5F5F5]" edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40, paddingTop: 20 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 70, paddingTop: 20 }}>
         
         {/* Header with Greeting and Cart */}
         <View className="px-4 flex-row justify-between items-center mb-4">

@@ -370,7 +370,7 @@ const Shop = () => {
               visibleCount < filteredProducts.length ? (
                 <TouchableOpacity
                   onPress={handleShowMore}
-                  className="mx-4 my-6 border border-[#E33675] rounded-full py-3 items-center"
+                  className="mx-4 my-14 border border-[#E33675] rounded-full py-3 items-center"
                 >
                   <Text className="text-[#E33675] font-bold text-base">Show more</Text>
                 </TouchableOpacity>
