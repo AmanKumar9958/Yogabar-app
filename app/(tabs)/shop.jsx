@@ -1,14 +1,24 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Animated,
+  FlatList,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
+import ProductModal from '../../components/ProductModal';
 import { useCart } from '../../context/CartContext';
 import { useShopifyProducts } from '../../hooks/useShopifyProducts';
 
-const ProductItem = ({ item }) => {
+// --- 1. ProductItem Extracted to separate component ---
+const ProductItem = ({ item, onPress }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const { addToCart } = useCart();
@@ -20,9 +30,15 @@ const ProductItem = ({ item }) => {
     if (item.price && typeof item.price.amount === 'string') return parseFloat(item.price.amount) || 0;
     return 0;
   };
+
   const displayPrice = getCartPrice(item);
+
   return (
-    <View className="flex-1 m-2 bg-[#FDF8F0] rounded-2xl p-3 shadow-sm">
+    <TouchableOpacity
+      activeOpacity={0.95}
+      onPress={() => onPress(item)}
+      className="flex-1 m-2 bg-[#FDF8F0] rounded-2xl p-3 shadow-sm"
+    >
       <View className="w-full h-32 bg-white rounded-xl mb-3 overflow-hidden items-center justify-center relative">
         {item.image && !hasError ? (
           <>
@@ -43,6 +59,12 @@ const ProductItem = ({ item }) => {
                 setHasError(true);
               }}
             />
+            {/* Sold Out Tag */}
+            {!item.availableForSale && (
+              <View className="absolute top-1 left-1 bg-gray-700 rounded px-2 py-0.5 z-20">
+                <Text className="text-[10px] font-bold text-white">SOLD OUT</Text>
+              </View>
+            )}
           </>
         ) : (
           <View className="w-full h-full bg-gray-100 items-center justify-center">
@@ -56,14 +78,11 @@ const ProductItem = ({ item }) => {
       </Text>
 
       <View className="flex-row items-center justify-between mt-auto">
-        <Text className="text-gray-600 font-medium">
-          ₹{Math.round(displayPrice)}
-        </Text>
-
-        <TouchableOpacity 
+        <Text className="text-gray-600 font-medium">₹{Math.round(displayPrice)}</Text>
+        <TouchableOpacity
           className="w-8 h-8 bg-[#E33675] rounded-full items-center justify-center shadow-sm"
-          onPress={() => {
-            // Pass normalized price for cart
+          onPress={(e) => {
+            e.stopPropagation && e.stopPropagation();
             addToCart({ ...item, price: displayPrice });
             Toast.show({
               type: 'success',
@@ -71,46 +90,38 @@ const ProductItem = ({ item }) => {
               text2: `${item.title} added to your cart.`,
             });
           }}
+          disabled={!item.availableForSale}
+          style={!item.availableForSale ? { opacity: 0.5 } : {}}
         >
           <Ionicons name="add" size={20} color="white" />
         </TouchableOpacity>
       </View>
-    </View>
+    </TouchableOpacity>
   );
-};    const Shop = () => {
-    const { q, category } = useLocalSearchParams();
-    const { cartItems, getCartCount } = useCart();
-    const router = require('expo-router').useRouter();
-    const { data: collections, loading, error } = useShopifyProducts();
-    const [searchQuery, setSearchQuery] = useState(q || '');
-    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(q || '');
-    const [selectedCategory, setSelectedCategory] = useState(category || 'All');
+};
+
+// --- 2. Main Shop Component ---
+const Shop = () => {
+  const router = useRouter();
+  const { data: collections, loading, error } = useShopifyProducts();
+  const { cartItems, getCartCount } = useCart();
+  
+  // State Management
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
   const [visibleCount, setVisibleCount] = useState(6);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+
   const categoryListRef = useRef(null);
 
-  // Update search query if passed via params
-  useEffect(() => {
-    if (q) {
-      setSearchQuery(q);
-    }
-  }, [q]);
-
-  // Update selected category if passed via params
-  useEffect(() => {
-    if (category) {
-      setSelectedCategory(category);
-    }
-  }, [category]);
-
-  // Debounce search query
+  // Search Debounce Logic
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
     }, 500);
-
-    return () => {
-      clearTimeout(handler);
-    };
+    return () => clearTimeout(handler);
   }, [searchQuery]);
 
   // Reset visible count when category or search changes
@@ -119,67 +130,61 @@ const ProductItem = ({ item }) => {
   }, [selectedCategory, debouncedSearchQuery]);
 
   // Scroll to selected category
+  const categories = useMemo(() => {
+    if (!collections) return ['All'];
+    return ['All', ...collections.map((c) => c.title)];
+  }, [collections]);
+
   useEffect(() => {
     if (categoryListRef.current && categories.length > 0) {
       const index = categories.indexOf(selectedCategory);
       if (index >= 0) {
-        // Scroll to the selected category to keep it visible
-        categoryListRef.current.scrollToIndex({ 
-          index, 
-          animated: true, 
-          viewPosition: 0.5 
+        categoryListRef.current.scrollToIndex({
+          index,
+          animated: true,
+          viewPosition: 0.5,
         });
       }
     }
-  }, [selectedCategory, categories]);    // Flatten all products for "All" category and search
-    const allProducts = useMemo(() => {
-        if (!collections) return [];
-        return collections.flatMap(collection => collection.products);
-    }, [collections]);
+  }, [selectedCategory, categories]);
 
-    // Filter products based on category and search query
-    const filteredProducts = useMemo(() => {
-        let products = [];
+  // Flatten all products for "All" category and search
+  const allProducts = useMemo(() => {
+    if (!collections) return [];
+    return collections.flatMap((collection) => collection.products);
+  }, [collections]);
 
-        if (selectedCategory === 'All') {
-        products = allProducts;
-        } else {
-        const collection = collections.find(c => c.title === selectedCategory);
-        products = collection ? collection.products : [];
-        }
+  // Filter products based on category and search query
+  const filteredProducts = useMemo(() => {
+    let products = [];
 
-        if (debouncedSearchQuery) {
-        products = products.filter(p =>
-            p.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
-        );
-        }
+    if (selectedCategory === 'All') {
+      products = allProducts;
+    } else {
+      const collection = collections.find((c) => c.title === selectedCategory);
+      products = collection ? collection.products : [];
+    }
 
-        // Remove duplicates if any (sometimes products appear in multiple collections)
-        return Array.from(new Map(products.map(item => [item.id, item])).values());
-    }, [selectedCategory, debouncedSearchQuery, collections, allProducts]);
+    if (debouncedSearchQuery) {
+      products = products.filter((p) =>
+        p.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
+      );
+    }
 
-    const displayedProducts = useMemo(() => {
-        return filteredProducts.slice(0, visibleCount);
-    }, [filteredProducts, visibleCount]);
+    // Remove duplicates
+    return Array.from(new Map(products.map((item) => [item.id, item])).values());
+  }, [selectedCategory, debouncedSearchQuery, collections, allProducts]);
 
-    const categories = useMemo(() => {
-        if (!collections) return ['All'];
-        return ['All', ...collections.map(c => c.title)];
-    }, [collections]);
+  const displayedProducts = useMemo(() => {
+    return filteredProducts.slice(0, visibleCount);
+  }, [filteredProducts, visibleCount]);
 
-    const handleShowMore = () => {
-        setVisibleCount(prev => prev + 6);
-    };
+  const handleShowMore = () => {
+    setVisibleCount((prev) => prev + 6);
+  };
 
   // Animated placeholder logic
-  const keywordOptions = [
-    'protein',
-    'whey protein',
-    'oats',
-    'muesli',
-    'bars',
-    'snacks',
-  ];
+  const keywordOptions = ['protein', 'whey protein', 'oats', 'muesli', 'bars', 'snacks'];
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [placeholderAnim] = useState(new Animated.Value(0));
 
@@ -201,10 +206,14 @@ const ProductItem = ({ item }) => {
     return () => clearInterval(interval);
   }, [placeholderAnim, keywordOptions.length]);
 
+  // Render Header Component
   const renderHeader = () => (
     <View className="px-2 pt-2 pb-4">
       {/* Search Bar */}
-      <View className="flex-row bg-white rounded-full px-4 py-1 mb-6 shadow-sm border border-gray-700 items-center" style={{ alignItems: 'center' }}>
+      <View
+        className="flex-row bg-white rounded-full px-4 py-1 mb-6 shadow-sm border border-gray-700 items-center"
+        style={{ alignItems: 'center' }}
+      >
         <View style={{ justifyContent: 'center', alignItems: 'center', height: 40 }}>
           <Ionicons name="search" size={22} color="#9CA3AF" style={{ marginTop: 2 }} />
         </View>
@@ -217,10 +226,22 @@ const ProductItem = ({ item }) => {
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
-          {/* Static 'Search for' and animated keyword */}
           {searchQuery.length === 0 && (
-            <View style={{ position: 'absolute', left: 0, top: 0, height: 40, flexDirection: 'row', alignItems: 'center', zIndex: 1 }} pointerEvents="none">
-              <Text style={{ color: '#9CA3AF', fontSize: 18, opacity: 0.8, paddingLeft: 2 }}>Search for </Text>
+            <View
+              style={{
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                height: 40,
+                flexDirection: 'row',
+                alignItems: 'center',
+                zIndex: 1,
+              }}
+              pointerEvents="none"
+            >
+              <Text style={{ color: '#9CA3AF', fontSize: 18, opacity: 0.8, paddingLeft: 2 }}>
+                Search for{' '}
+              </Text>
               <Animated.Text
                 style={{
                   color: '#9CA3AF',
@@ -267,92 +288,138 @@ const ProductItem = ({ item }) => {
           </TouchableOpacity>
         )}
         onScrollToIndexFailed={(info) => {
-          const wait = new Promise(resolve => setTimeout(resolve, 500));
+          const wait = new Promise((resolve) => setTimeout(resolve, 500));
           wait.then(() => {
-            categoryListRef.current?.scrollToIndex({ index: info.index, animated: true, viewPosition: 0.5 });
+            categoryListRef.current?.scrollToIndex({
+              index: info.index,
+              animated: true,
+              viewPosition: 0.5,
+            });
           });
         }}
       />
     </View>
-  );    if (loading) {
-        return (
-        <View className="flex-1 justify-center items-center bg-[#F5F5F5]">
-            <ActivityIndicator size="large" color="#E33675" />
-        </View>
-        );
-    }
+  );
 
-    if (error) {
-        return (
-        <View className="flex-1 justify-center items-center bg-[#F5F5F5] p-4">
-            <Text className="text-red-500 text-center mb-4">Error loading products</Text>
-            <Text className="text-gray-500 text-center text-xs">{error.message}</Text>
-        </View>
-        );
-    }
+  // Cart Calculations
+  const getTotalPrice = () => {
+    if (!cartItems || cartItems.length === 0) return 0;
+    return cartItems.reduce((sum, item) => {
+      let price = 0;
+      if (item.price && typeof item.price.amount === 'number' && !isNaN(item.price.amount))
+        price = item.price.amount;
+      else if (typeof item.price === 'number' && !isNaN(item.price)) price = item.price;
+      else if (item.price && typeof item.price.amount === 'string')
+        price = parseFloat(item.price.amount) || 0;
+      
+      if (!price || isNaN(price)) return sum;
+      return sum + price * (item.quantity && item.quantity > 0 ? item.quantity : 1);
+    }, 0);
+  };
 
-    // Calculate total price robustly using cartItems
-    const getTotalPrice = () => {
-      if (!cartItems || cartItems.length === 0) return 0;
-      return cartItems.reduce((sum, item) => {
-        let price = 0;
-        if (item.price && typeof item.price.amount === 'number' && !isNaN(item.price.amount)) price = item.price.amount;
-        else if (typeof item.price === 'number' && !isNaN(item.price)) price = item.price;
-        else if (item.price && typeof item.price.amount === 'string') price = parseFloat(item.price.amount) || 0;
-        if (!price || isNaN(price)) return sum;
-        return sum + price * (item.quantity && item.quantity > 0 ? item.quantity : 1);
-      }, 0);
-    };
-    const totalItems = getCartCount();
-    const totalPrice = getTotalPrice();
+  const totalItems = getCartCount();
+  const totalPrice = getTotalPrice();
 
+  const handleProductPress = (product) => {
+    setSelectedProduct(product);
+    setModalVisible(true);
+  };
+
+  if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-transparent" edges={['top']}>
-        <View style={{ flex: 1 }}>
-          <FlatList
-            data={displayedProducts}
-            renderItem={({ item }) => <ProductItem item={item} />}
-            keyExtractor={(item) => item.id}
-            numColumns={2}
-            contentContainerStyle={{ padding: 8, paddingBottom: totalItems > 0 ? 200 : 100, paddingTop: 20 }}
-            ListHeaderComponent={renderHeader()}
-            showsVerticalScrollIndicator={false}
-            ListFooterComponent={() => (
-              filteredProducts.length > 0 ? (
-                visibleCount < filteredProducts.length ? (
-                  <TouchableOpacity
-                    onPress={handleShowMore}
-                    className="mx-4 my-6 border border-[#E33675] rounded-full py-3 items-center"
-                  >
-                    <Text className="text-[#E33675] font-bold text-base">Show more</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <Text className="text-center text-gray-500 mt-10 mb-6">No more products</Text>
-                )
-              ) : (
-                <Text className="text-center text-gray-500 mt-10">No products found</Text>
-              )
-            )}
-          />
-          {/* Checkout Button Fixed at Bottom, outside FlatList */}
-          {totalItems > 0 && (
-            <View style={{ position: 'absolute', left: 0, right: 0, bottom: 80, padding: 16, borderTopWidth: 0, borderColor: 'transparent', elevation: 8 }}>
-              <TouchableOpacity
-                className="flex-row items-center justify-between bg-[#E33675] rounded-full px-6 py-4"
-                onPress={() => router.push('/cart')}
-                activeOpacity={0.85}
-              >
-                <View>
-                  <Text className="text-white font-bold text-base">Checkout</Text>
-                  <Text className="text-white text-sm mt-1">{totalItems} item{totalItems > 1 ? 's' : ''} • ₹{Math.round(totalPrice)}</Text>
-                </View>
-                <Ionicons name="arrow-forward-circle" size={32} color="#fff" style={{ marginLeft: 12 }} />
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-      </SafeAreaView>
+      <View className="flex-1 justify-center items-center bg-[#F5F5F5]">
+        <ActivityIndicator size="large" color="#E33675" />
+      </View>
     );
+  }
+
+  if (error) {
+    return (
+      <View className="flex-1 justify-center items-center bg-[#F5F5F5] p-4">
+        <Text className="text-red-500 text-center mb-4">Error loading products</Text>
+        <Text className="text-gray-500 text-center text-xs">{error.message}</Text>
+      </View>
+    );
+  }
+
+  return (
+    <SafeAreaView className="flex-1 bg-transparent" edges={['top']}>
+      <View style={{ flex: 1 }}>
+        <FlatList
+          data={displayedProducts}
+          renderItem={({ item }) => <ProductItem item={item} onPress={handleProductPress} />}
+          keyExtractor={(item) => item.id}
+          numColumns={2}
+          contentContainerStyle={{
+            padding: 8,
+            paddingBottom: totalItems > 0 ? 200 : 100,
+            paddingTop: 20,
+          }}
+          ListHeaderComponent={renderHeader()}
+          showsVerticalScrollIndicator={false}
+          ListFooterComponent={() =>
+            filteredProducts.length > 0 ? (
+              visibleCount < filteredProducts.length ? (
+                <TouchableOpacity
+                  onPress={handleShowMore}
+                  className="mx-4 my-6 border border-[#E33675] rounded-full py-3 items-center"
+                >
+                  <Text className="text-[#E33675] font-bold text-base">Show more</Text>
+                </TouchableOpacity>
+              ) : (
+                <Text className="text-center text-gray-500 mt-10 mb-6">No more products</Text>
+              )
+            ) : (
+              <Text className="text-center text-gray-500 mt-10">No products found</Text>
+            )
+          }
+        />
+
+        {/* Checkout Button Fixed at Bottom */}
+        {totalItems > 0 && (
+          <View
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              bottom: 80,
+              padding: 16,
+              borderTopWidth: 0,
+              borderColor: 'transparent',
+              elevation: 8,
+              zIndex: 50,
+            }}
+          >
+            <TouchableOpacity
+              className="flex-row items-center justify-between bg-[#E33675] rounded-full px-6 py-4"
+              onPress={() => router.push('/cart')}
+              activeOpacity={0.85}
+            >
+              <View>
+                <Text className="text-white font-bold text-base">Checkout</Text>
+                <Text className="text-white text-sm mt-1">
+                  {totalItems} item{totalItems > 1 ? 's' : ''} • ₹{Math.round(totalPrice)}
+                </Text>
+              </View>
+              <Ionicons
+                name="arrow-forward-circle"
+                size={32}
+                color="#fff"
+                style={{ marginLeft: 12 }}
+              />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Product Description Modal */}
+        <ProductModal
+          visible={modalVisible}
+          onClose={() => setModalVisible(false)}
+          product={selectedProduct}
+        />
+      </View>
+    </SafeAreaView>
+  );
 };
 
 export default Shop;

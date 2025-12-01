@@ -6,16 +6,17 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, BackHandler, Dimensions, FlatList, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
+import ProductModal from '../../components/ProductModal';
 import { useCart } from '../../context/CartContext';
 import { useShopifyProducts } from '../../hooks/useShopifyProducts';
 import { getCustomer } from '../../services/shopify';
 
 const { width } = Dimensions.get('window');
 
-const ProductCard = ({ item, showNewTag = false }) => {
+const ProductCard = ({ item, showNewTag = false, onPress }) => {
   const { addToCart } = useCart();
   // Defensive price normalization
-  const getCartPrice = (item) => {
+  const getCartPrice = (item) => { 
     if (typeof item.price === 'number') return item.price;
     if (item.price && typeof item.price.amount === 'number') return item.price.amount;
     if (item.price && typeof item.price.amount === 'string') return parseFloat(item.price.amount) || 0;
@@ -23,7 +24,11 @@ const ProductCard = ({ item, showNewTag = false }) => {
   };
   const displayPrice = getCartPrice(item);
   return (
-    <View className="w-40 mr-4 bg-white rounded-xl p-3 shadow-sm">
+    <TouchableOpacity
+      activeOpacity={0.95}
+      onPress={() => onPress && onPress(item)}
+      className="w-40 mr-4 bg-white rounded-xl p-3 shadow-sm"
+    >
       <View className="relative w-full h-32 bg-gray-50 rounded-lg mb-2 items-center justify-center">
         <Image
           source={{ uri: item.image }}
@@ -34,6 +39,12 @@ const ProductCard = ({ item, showNewTag = false }) => {
         {showNewTag && (
           <View className="absolute top-1 left-1 bg-green-600 rounded px-1.5 py-0.5">
             <Text className="text-[10px] font-bold text-white">NEW</Text>
+          </View>
+        )}
+        {/* Sold Out Tag */}
+        {!item.availableForSale && (
+          <View className="absolute top-1 right-1 bg-gray-700 rounded px-2 py-0.5 z-20">
+            <Text className="text-[10px] font-bold text-white">SOLD OUT</Text>
           </View>
         )}
       </View>
@@ -49,7 +60,8 @@ const ProductCard = ({ item, showNewTag = false }) => {
         </Text>
         <TouchableOpacity 
           className="w-6 h-6 bg-[#E33675] rounded-full items-center justify-center"
-          onPress={() => {
+          onPress={(e) => {
+            e.stopPropagation && e.stopPropagation();
             addToCart({ ...item, price: displayPrice });
             Toast.show({
               type: 'success',
@@ -57,11 +69,13 @@ const ProductCard = ({ item, showNewTag = false }) => {
               text2: `${item.title} added to your cart.`,
             });
           }}
+          disabled={!item.availableForSale}
+          style={!item.availableForSale ? { opacity: 0.5 } : {}}
         >
           <Ionicons name="add" size={16} color="white" />
         </TouchableOpacity>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 
@@ -135,10 +149,10 @@ const BannerCarousel = () => {
       {/* Pagination Dots */}
       <View className="flex-row justify-center mt-2 space-x-2">
         {banners.map((_, index) => (
-            <View 
-                key={index} 
-                className={`h-2 rounded-full ${index === activeIndex ? 'w-6 bg-[#E33675]' : 'w-2 bg-gray-300'}`} 
-            />
+          <View 
+            key={index} 
+            className={`h-2 rounded-full ${index === activeIndex ? 'w-6 bg-[#E33675]' : 'w-2 bg-gray-300'}`} 
+          />
         ))}
       </View>
     </View>
@@ -186,6 +200,14 @@ const CategoryGrid = ({ categories, onViewAll, onCategoryPress }) => {
 };
 
 const Home = () => {
+        // Modal state for product details
+        const [modalVisible, setModalVisible] = useState(false);
+        const [selectedProduct, setSelectedProduct] = useState(null);
+
+        const handleProductPress = (product) => {
+          setSelectedProduct(product);
+          setModalVisible(true);
+        };
       // Animated keyword placeholder logic for search bar
       const keywordOptions = [
         'protein',
@@ -356,7 +378,7 @@ const Home = () => {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 16 }}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <ProductCard item={item} />}
+          renderItem={({ item }) => <ProductCard item={item} onPress={handleProductPress} />}
         />
 
         {/* New Arrivals */}
@@ -367,7 +389,7 @@ const Home = () => {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 16 }}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <ProductCard item={item} showNewTag={true} />}
+          renderItem={({ item }) => <ProductCard item={item} showNewTag={true} onPress={handleProductPress} />}
         />
 
         {/* Best Sellers */}
@@ -378,7 +400,13 @@ const Home = () => {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 16 }}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <ProductCard item={item} />}
+          renderItem={({ item }) => <ProductCard item={item} onPress={handleProductPress} />}
+        />
+        {/* Product Description Modal */}
+        <ProductModal
+          visible={modalVisible}
+          onClose={() => setModalVisible(false)}
+          product={selectedProduct}
         />
 
         {/* Carousel */}
