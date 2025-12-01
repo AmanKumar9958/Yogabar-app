@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -69,10 +70,39 @@ const Checkout = () => {
       // Simulate order placement / payment flow
       await new Promise((res) => setTimeout(res, 800));
 
+      // Create a new order object to be stored locally
+      const newOrder = {
+        id: `local-order-${Date.now()}`,
+        orderId: Math.floor(1000 + Math.random() * 9000),
+        amount: grandTotal,
+        currency: '₹',
+        date: new Date().toDateString(),
+        status: 'Processing',
+        items: cartItems.map((item) => ({
+          id: item.id,
+          title: item.title,
+          quantity: item.quantity || 1,
+          price: getPrice(item),
+        })),
+        shippingAddress: { name, address, pincode, mobile },
+      };
+
+      // Retrieve, update, and save orders in AsyncStorage
+      const existingOrdersJSON = await AsyncStorage.getItem('userOrders');
+      const existingOrders = existingOrdersJSON ? JSON.parse(existingOrdersJSON) : [];
+      const updatedOrders = [newOrder, ...existingOrders];
+      await AsyncStorage.setItem('userOrders', JSON.stringify(updatedOrders));
+
       // For COD, finalize immediately. For online, you'd integrate payment SDK here.
       clearCart();
-      Toast.show({ type: 'success', text1: 'Order placed', text2: `₹${grandTotal.toFixed(2)} — ${paymentMethod === 'cod' ? 'Cash on Delivery' : 'Online Payment'}` });
-      router.push('/orders');
+      Toast.show({
+        type: 'success',
+        text1: 'Order placed',
+        text2: `₹${grandTotal.toFixed(2)} — ${
+          paymentMethod === 'cod' ? 'Cash on Delivery' : 'Online Payment'
+        }`,
+      });
+      router.push('/(tabs)/orders');
     } catch (err) {
       console.error(err);
       Toast.show({ type: 'error', text1: 'Failed to place order' });

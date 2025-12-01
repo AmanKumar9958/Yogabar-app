@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
   FlatList,
+  RefreshControl,
   Text,
   TextInput,
   TouchableOpacity,
@@ -103,18 +104,26 @@ const ProductItem = ({ item, onPress }) => {
 // --- 2. Main Shop Component ---
 const Shop = () => {
   const router = useRouter();
-  const { data: collections, loading, error } = useShopifyProducts();
+  const params = useLocalSearchParams();
+  const { data: collections, loading, error, refetch } = useShopifyProducts();
   const { cartItems, getCartCount } = useCart();
   
   // State Management
-  const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [searchQuery, setSearchQuery] = useState(params.q || '');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(params.q || '');
+  const [selectedCategory, setSelectedCategory] = useState(params.category || 'All');
   const [visibleCount, setVisibleCount] = useState(6);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const categoryListRef = useRef(null);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }, [refetch]);
 
   // Search Debounce Logic
   useEffect(() => {
@@ -131,8 +140,9 @@ const Shop = () => {
 
   // Scroll to selected category
   const categories = useMemo(() => {
-    if (!collections) return ['All'];
-    return ['All', ...collections.map((c) => c.title)];
+    if (!collections) return [];
+    // The hook now returns collections with 'All' already included
+    return collections.map((c) => c.title);
   }, [collections]);
 
   useEffect(() => {
@@ -148,22 +158,17 @@ const Shop = () => {
     }
   }, [selectedCategory, categories]);
 
-  // Flatten all products for "All" category and search
+  // The 'All' collection is now provided by the hook, so we find it.
   const allProducts = useMemo(() => {
-    if (!collections) return [];
-    return collections.flatMap((collection) => collection.products);
+    const allCollection = collections.find(c => c.title === 'All');
+    return allCollection ? allCollection.products : [];
   }, [collections]);
 
   // Filter products based on category and search query
   const filteredProducts = useMemo(() => {
     let products = [];
-
-    if (selectedCategory === 'All') {
-      products = allProducts;
-    } else {
-      const collection = collections.find((c) => c.title === selectedCategory);
-      products = collection ? collection.products : [];
-    }
+    const collection = collections.find((c) => c.title === selectedCategory);
+    products = collection ? collection.products : [];
 
     if (debouncedSearchQuery) {
       products = products.filter((p) =>
@@ -171,9 +176,9 @@ const Shop = () => {
       );
     }
 
-    // Remove duplicates
-    return Array.from(new Map(products.map((item) => [item.id, item])).values());
-  }, [selectedCategory, debouncedSearchQuery, collections, allProducts]);
+    // No need to de-duplicate here if the source is clean
+    return products;
+  }, [selectedCategory, debouncedSearchQuery, collections]);
 
   const displayedProducts = useMemo(() => {
     return filteredProducts.slice(0, visibleCount);
@@ -357,6 +362,9 @@ const Shop = () => {
           }}
           ListHeaderComponent={renderHeader()}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#E33675']} />
+          }
           ListFooterComponent={() =>
             filteredProducts.length > 0 ? (
               visibleCount < filteredProducts.length ? (

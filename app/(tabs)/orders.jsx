@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getCustomer } from '../../services/shopify.js'; 
+import { getCustomer } from '../../services/shopify.js';
 
 const statusStyles = {
   Delivered: 'bg-green-100 text-green-700',
@@ -64,35 +64,48 @@ export default function OrdersScreen() {
 
   const fetchOrders = async () => {
     try {
+      setLoading(true);
       // 1. Get Token from Storage (Saved during Login)
-      const token = await AsyncStorage.getItem('userToken'); 
+      const token = await AsyncStorage.getItem('userToken');
       
-      if (!token) {
-        setLoading(false);
-        setError("Please log in to view orders");
-        return; 
+      // Fetch orders from Shopify if logged in
+      let shopifyOrders = [];
+      if (token) {
+        try {
+            const customer = await getCustomer(token);
+            if (customer && customer.orders) {
+              shopifyOrders = customer.orders.edges.map((edge) => {
+                  const node = edge.node;
+                  return {
+                    id: node.id,
+                    orderId: node.orderNumber, // e.g. 1001
+                    amount: node.totalPrice.amount,
+                    currency: node.totalPrice.currencyCode === 'INR' ? '₹' : node.totalPrice.currencyCode,
+                    date: new Date(node.processedAt).toDateString(),
+                    status: getStatus(node.fulfillmentStatus, node.financialStatus),
+                    items: node.lineItems.edges.map((e) => e.node)
+                  };
+              });
+            }
+        } catch (shopifyError) {
+            console.warn("Could not fetch Shopify orders, proceeding with local.", shopifyError);
+            // Don't block UI if Shopify fails, local orders can still be shown
+        }
       }
 
-      // 2. Call API
-      const customer = await getCustomer(token);
+      // Fetch locally stored orders
+      const localOrdersJSON = await AsyncStorage.getItem('userOrders');
+      const localOrders = localOrdersJSON ? JSON.parse(localOrdersJSON) : [];
 
-      if (customer && customer.orders) {
-        // 3. Map Shopify Data Structure to Your App Structure
-        const mappedOrders = customer.orders.edges.map((edge) => {
-            const node = edge.node;
-            return {
-              id: node.id,
-              orderId: node.orderNumber, // e.g. 1001
-              amount: node.totalPrice.amount,
-              currency: node.totalPrice.currencyCode === 'INR' ? '₹' : node.totalPrice.currencyCode,
-              date: new Date(node.processedAt).toDateString(),
-              status: getStatus(node.fulfillmentStatus, node.financialStatus),
-              items: node.lineItems.edges.map((e) => e.node)
-            };
-        });
-        setOrders(mappedOrders);
-        setError(null);
-      }
+      // Combine and de-duplicate orders, giving preference to Shopify orders
+      const allOrders = [...shopifyOrders, ...localOrders];
+      const uniqueOrders = Array.from(new Map(allOrders.map(order => [order.id, order])).values());
+      
+      // Sort by date
+      uniqueOrders.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      setOrders(uniqueOrders);
+      setError(null);
     } catch (err) {
       console.error(err);
       setError('Failed to load orders.');
