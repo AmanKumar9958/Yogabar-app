@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { getCustomer } from '../../services/shopify';
 
@@ -11,11 +11,14 @@ const Profile = () => {
     const [customer, setCustomer] = useState(null);
     const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchProfile();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchProfile();
+    }, [])
+  );
 
   const fetchProfile = async () => {
+    setLoading(true);
     try {
       const token = await AsyncStorage.getItem('userToken');
       if (!token) {
@@ -26,7 +29,12 @@ const Profile = () => {
       setCustomer(data);
     } catch (error) {
       console.error('Error fetching profile:', error);
-      // If token is invalid, maybe redirect to login
+      if (error?.message?.toLowerCase().includes('log in')) {
+        await AsyncStorage.removeItem('userToken');
+        router.replace('/login');
+      } else {
+        setCustomer(null);
+      }
     } finally {
       setLoading(false);
     }

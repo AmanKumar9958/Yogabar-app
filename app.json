@@ -4,17 +4,14 @@
     "slug": "Yogabar-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    
-    "icon": "./assets/images/logo.png", 
+    "icon": "./assets/images/logo.png",
     "scheme": "yogabarapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.aman.yogabarapp"
     },
-    
     "android": {
       "package": "com.aman.yogabarapp",
       "adaptiveIcon": {
@@ -24,7 +21,6 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
-    
     "plugins": [
       "expo-router",
       [
@@ -35,9 +31,9 @@
           "resizeMode": "contain",
           "backgroundColor": "#FFF9E9"
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
-    
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true

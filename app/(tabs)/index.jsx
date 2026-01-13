@@ -262,10 +262,11 @@ const Home = () => {
       const token = await AsyncStorage.getItem('userToken');
       if (token) {
         const customer = await getCustomer(token);
-        setUserName(customer.firstName);
+        setUserName(customer?.firstName || '');
       }
     } catch (error) {
       console.log('Error fetching user:', error);
+      setUserName('');
     }
   };
 

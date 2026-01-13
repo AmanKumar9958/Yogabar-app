@@ -188,5 +188,8 @@ export const getCustomer = async (accessToken) => {
 
   const variables = { customerAccessToken: accessToken };
   const data = await shopifyRequest(query, variables);
+  if (!data || !data.customer) {
+    throw new Error('Customer details unavailable. Please log in again.');
+  }
   return data.customer;
 };
