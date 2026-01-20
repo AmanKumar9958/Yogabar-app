@@ -143,17 +143,21 @@ export default function Signup() {
 
           <View>
             <Text className="text-gray-700 mb-2 font-medium ml-1">Phone</Text>
+            <View className="w-full flex-row items-center border border-gray-500 rounded-xl">
+              <Text className="px-4 text-base text-gray-700">+91</Text>
               <TextInput
                 ref={phoneRef}
-                className="w-full p-4 rounded-xl border border-gray-500 text-base"
+                className="flex-1 p-4 text-base"
                 placeholder="Enter your phone number"
                 value={formData.phone}
                 onChangeText={(t) => handleChange('phone', t)}
                 keyboardType="phone-pad"
                 placeholderTextColor="#9CA3AF"
                 returnKeyType="next"
+                maxLength={10}
                 onSubmitEditing={() => emailRef.current?.focus()}
               />
+            </View>
             {errors.phone && <Text className="text-red-500 text-sm ml-1 mt-1">{errors.phone}</Text>}
           </View>
 
