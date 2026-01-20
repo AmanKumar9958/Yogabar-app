@@ -57,6 +57,9 @@ export const loginCustomer = async (email, password) => {
 };
 
 export const createCustomer = async ({ firstName, lastName, email, password, phone }) => {
+  // Format phone number to E.164 format (add +91 for India)
+  const formattedPhone = phone.startsWith('+') ? phone : `+91${phone.replace(/\D/g, '')}`;
+  
   const query = `
     mutation customerCreate($input: CustomerCreateInput!) {
       customerCreate(input: $input) {
@@ -81,7 +84,7 @@ export const createCustomer = async ({ firstName, lastName, email, password, pho
       lastName,
       email,
       password,
-      phone
+      phone: formattedPhone  // Use formatted phone with country code
     }
   };
 
