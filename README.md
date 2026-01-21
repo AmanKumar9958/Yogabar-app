@@ -1,2 +1,1 @@
-- add cart icon on Home screen with working number of available items in the cart
-- add dynamic message according to time: Good morning/afternoon/evening and logged in user name below the welcome message
+Demo Video: https://drive.google.com/file/d/156gXt53YcsxbkBGjrSe3y1WmLSF3hIiB/view?usp=sharing
